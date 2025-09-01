@@ -1,0 +1,17 @@
+Crypto Trading Signal Parser — Test Report (v2 fixed)
+======================================================================
+
+Signal #1
+ Pair: XTZ/USDT
+ Direction: LONG
+ Entries: [0.737]
+ Entry avg: 0.737
+ Targets: [0.747, 0.76]
+ Stop-loss: 0.706 (100%)
+ RR (1st target): 0.3226
+
+Summary
+-------
+Total signals processed: 1
+Coverage: {'pair': 1, 'direction': 1, 'entries': 1, 'targets': 1, 'stop': 1}
+Accuracy (coverage %): {"pair": 100.0, "direction": 100.0, "entries": 100.0, "targets": 100.0, "stop": 100.0}

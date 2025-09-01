@@ -1,0 +1,6 @@
+#XTZ/USDT
+
+Entry: 0.737
+Stop: 0.706 - 100%
+Targets: 0.747, 0.760
+%%--SIGNAL_BOUNDARY--%%
