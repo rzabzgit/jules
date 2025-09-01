@@ -1,0 +1,12 @@
+#BTC/USDT
+
+Entry Targets:
+50000
+51000
+
+Take-Profit Targets:
+55000
+56000
+
+Stop Loss: 48000
+%%--SIGNAL_BOUNDARY--%%
