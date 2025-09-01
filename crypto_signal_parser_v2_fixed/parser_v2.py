@@ -334,12 +334,22 @@ def parse_entries(text: str) -> Tuple[List[float], Optional[float], Dict[str,boo
     # 1. Filter out negative prices
     positive_entries = [(p, w) for p, w in entries_with_weights if p > 0]
 
-    # 2. If any decimals present, drop small pure integers likely from enumeration
+    # 2. Drop small integer enumerations if context suggests they aren't prices
     prices_only = [p for p, w in positive_entries]
-    has_decimal = any((p != int(p)) for p in prices_only)
-    if has_decimal:
-        filtered_entries_with_weights = [(p, w) for p, w in positive_entries if (p != int(p)) or p >= 1000]
+    has_decimal = any(p != int(p) for p in prices_only)
+    # Heuristic: if a very large number is present, small integers are likely enumerators
+    has_large_number = any(p >= 1000 for p in prices_only)
+
+    if has_decimal or has_large_number:
+        # If we have a reason to believe small integers are enumerators, filter them out.
+        # We define "small integers" as those from 1 up to 10, which matches the logic in `parse_targets`.
+        small_integer_max = 10
+        filtered_entries_with_weights = [
+            (p, w) for p, w in positive_entries
+            if (p != int(p)) or not (1 <= p <= small_integer_max)
+        ]
     else:
+        # Otherwise, we can't be sure, so keep all numbers.
         filtered_entries_with_weights = positive_entries
 
     # 3. Trim to max 4 entries
