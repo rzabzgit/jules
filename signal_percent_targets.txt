@@ -1,0 +1,6 @@
+#BTC/USDT
+Signal:
+Entry: 100
+Target: 50% , 200%
+Stoploss: 90
+%%--SIGNAL_BOUNDARY--%%
