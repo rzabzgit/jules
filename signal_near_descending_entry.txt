@@ -1,0 +1,8 @@
+#NEAR/USDT
+
+Entry: 3.2-2.87
+
+Targets: 3.5, 3.8, 4.0
+
+Stoploss: 2.5
+%%--SIGNAL_BOUNDARY--%%

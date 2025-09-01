@@ -80,7 +80,9 @@ def _norm(s: str) -> str:
     # unroll special dashes/bullets
     s = s.replace("–","-").replace("—","-").replace("•"," ").replace("·"," ").replace("•"," ")
     # normalize weird pipes and underscores used as separators
-    s = s.replace("_"," ").replace("|"," ").replace("–","-")
+    s = s.replace("_"," ").replace("|"," ")
+    # Replace hyphen between numbers with a space
+    s = re.sub(r'(\d)\s*-\s*(\d)', r'\1 \2', s)
     # unify coin separators variations like ' | ' ' / ' ' - '
     return s
 
