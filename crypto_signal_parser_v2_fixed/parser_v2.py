@@ -517,22 +517,20 @@ def parse_stop(text: str, direction: str, entry_price: Optional[float]) -> Tuple
             p1 = float(m_rng.group(1)); p2 = float(m_rng.group(2))
             worst = max(p1, p2)
             stop_pct = worst
-            if entry_price is not None:
+            if entry_price is not None and stop_val is None: # Only set if no absolute val yet
                 if direction == "LONG": stop_val = entry_price * (1 - worst/100.0)
                 else: stop_val = entry_price * (1 + worst/100.0)
-            else:
+            elif entry_price is None:
                 meta["percent_range_no_entry"] = "1"
-            break
 
         if m_pct:
             p = float(m_pct.group(1))
             stop_pct = p
-            if entry_price is not None:
+            if entry_price is not None and stop_val is None: # Only set if no absolute val yet
                 if direction == "LONG": stop_val = entry_price * (1 - p/100.0)
                 else: stop_val = entry_price * (1 + p/100.0)
-            else:
+            elif entry_price is None:
                 meta["percent_no_entry"] = "1"
-            break
 
         # New: check for conditional phrases like '4H close under 123.45'
         conditional_patterns = r"(?:stop-?loss\s*(?:on)?)?\s*(?:daily\s+close|\d+H\s*close|close\s*\d+H)\s+(?:under|below)\s+([\d.]+)"
@@ -542,13 +540,16 @@ def parse_stop(text: str, direction: str, entry_price: Optional[float]) -> Tuple
             if val is not None:
                 stop_val = val
                 meta["mode"] = "conditional"
-                break
 
-        # direct numeric stop price on same line
-        nums = _numbers_from(ln)
+        # direct numeric stop price on same line (could co-exist with percent)
+        # Exclude numbers that are part of the percentage match itself
+        line_without_pct = re.sub(r"(\d+(?:\.\d+)?)\s*%", "", ln)
+        nums = _numbers_from(line_without_pct)
         if nums:
             stop_val = nums[-1][0]
-            break
+
+        # If we found a stop line, we process it and break, not continuing to next lines for a stop
+        break
 
         # If we looked ahead for percent and found none, also check for number on the next line
         if not lookahead_checked and i+1 < n:
