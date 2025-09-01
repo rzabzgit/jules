@@ -71,6 +71,14 @@ KNOWN_SINGLE_LETTER_COINS: set[str] = set()
 
 def _norm(s: str) -> str:
     """Normalize text: unify separators, remove zero-widths, collapse spaces, keep case for symbol parsing."""
+    # Persian and Arabic digits to Western digits
+    persian_digits = "۰۱۲۳۴۵۶۷۸۹"
+    arabic_digits = "٠١٢٣٤٥٦٧٨٩"
+    english_digits = "0123456789"
+
+    translation_table = str.maketrans(persian_digits + arabic_digits, english_digits * 2)
+    s = s.translate(translation_table)
+
     s = s.replace("\u200c","").replace("\u200b","")
     # unroll special dashes/bullets
     s = s.replace("–","-").replace("—","-").replace("•"," ").replace("·"," ").replace("•"," ")
