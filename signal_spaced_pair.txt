@@ -1,0 +1,10 @@
+BTC USDT
+
+Long
+
+Entry: 50000
+
+Target: 55000
+
+Stoploss: 48000
+%%--SIGNAL_BOUNDARY--%%

@@ -277,6 +277,15 @@ def extract_symbol(text: str) -> Tuple[Optional[str], Optional[str], Dict[str,st
             return b, q, {"mode":"concat_single_base"}
         return b, q, {"mode":"slash_hyphen_usd"}
 
+    # Fallback to spaced pair like 'BTC USDT' if no slash is present
+    if "/" not in U:
+        m = re.search(r'\b([A-Z0-9]+)\s+([A-Z]{2,5})\b', U)
+        if m:
+            base = m.group(1)
+            quote = m.group(2)
+            if quote in KNOWN_QUOTES:
+                return base, quote, {"mode": "spaced_pair"}
+
     return None, None, {}
 
 
