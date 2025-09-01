@@ -71,14 +71,6 @@ KNOWN_SINGLE_LETTER_COINS: set[str] = set()
 
 def _norm(s: str) -> str:
     """Normalize text: unify separators, remove zero-widths, collapse spaces, keep case for symbol parsing."""
-    # Persian and Arabic digits to Western digits
-    persian_digits = "۰۱۲۳۴۵۶۷۸۹"
-    arabic_digits = "٠١٢٣٤٥٦٧٨٩"
-    english_digits = "0123456789"
-
-    translation_table = str.maketrans(persian_digits + arabic_digits, english_digits * 2)
-    s = s.translate(translation_table)
-
     s = s.replace("\u200c","").replace("\u200b","")
     # unroll special dashes/bullets
     s = s.replace("–","-").replace("—","-").replace("•"," ").replace("·"," ").replace("•"," ")
@@ -119,6 +111,43 @@ def _line_has_any(line: str, keys: List[str]) -> bool:
 def _line_is_noisy(line: str) -> bool:
     U = line.upper()
     return any(h in U for h in NOISY_LINE_HINTS)
+
+
+def _numbers_and_weights_from(line: str) -> List[Tuple[float, Optional[float]]]:
+    """Extracts numbers and optional, associated percentage weights from a line."""
+    entries_with_weights: List[Tuple[float, Optional[float]]] = []
+    cursor = 0
+    while cursor < len(line):
+        # Find the next number from the current cursor position
+        match = re.search(r"(?<![A-Za-z])(-?\d+(?:[.,]\d+)?)(?![A-Za-z])", line[cursor:])
+        if not match:
+            break
+
+        price_str = match.group(1)
+        price = _float(price_str)
+
+        # Absolute position in the line of the end of the number match
+        absolute_end_of_number = cursor + match.end()
+
+        if price is None:
+            cursor = absolute_end_of_number
+            continue
+
+        # Look for a weight immediately after the number
+        weight_match = re.match(r"\s*\(\s*(\d+(?:\.\d+)?)\s*%\s*\)", line[absolute_end_of_number:])
+
+        weight = None
+        if weight_match:
+            weight = float(weight_match.group(1))
+            # Advance cursor past the number and the weight
+            cursor = absolute_end_of_number + weight_match.end()
+        else:
+            # Advance cursor past the number
+            cursor = absolute_end_of_number
+
+        entries_with_weights.append((price, weight))
+
+    return entries_with_weights
 
 
 # ----------------------------- Symbol Extraction -----------------------------
@@ -276,39 +305,67 @@ def detect_direction(text: str) -> str:
 # ----------------------------- Entries ---------------------------------------
 
 def parse_entries(text: str) -> Tuple[List[float], Optional[float], Dict[str,bool]]:
-    entries: List[float] = []
+    entries_with_weights: List[Tuple[float, Optional[float]]] = []
     meta = {"used_cmp": False, "entry_detected": False}
 
     for ln in text.splitlines():
-        if _line_is_noisy(ln): 
+        # Ignore comments and noisy lines
+        if ln.strip().startswith('#') or _line_is_noisy(ln):
             continue
+
         LU = ln.upper()
-        if _line_has_any(LU, ENTRY_KEYS) or re.search(r"\bENTRY\b", LU):
-            nums = _numbers_from(ln)
-            if nums:
-                # Heuristic: keep values that look like prices (not enumerations)
-                entries.extend(nums)
+        is_entry_line = _line_has_any(LU, ENTRY_KEYS) or re.search(r"\bENTRY\b", LU)
+        # CMP lines are not entry zones, handle separately and don't look for weights
+        is_cmp_line = any(k in LU for k in ("CMP", "CURRENT ASK", "CURRENT PRICE"))
+
+        if is_entry_line:
+            line_entries = _numbers_and_weights_from(ln)
+            if line_entries:
+                entries_with_weights.extend(line_entries)
                 meta["entry_detected"] = True
-                continue
-        # CMP / now lines
-        if any(k in LU for k in ("CMP", "CURRENT ASK", "CURRENT PRICE")):
+        elif is_cmp_line:
+            # For CMP, take only the first number and ignore any weights
             nums = _numbers_from(ln)
             if nums:
-                entries.extend(nums[:1])
+                entries_with_weights.append((nums[0], None))
                 meta["used_cmp"] = True
 
-    # Filter obviously wrong picks
-    out = [v for v in entries if v > 0]
-    # If any decimals present, drop small pure integers likely from enumeration unless very large (>=1000)
-    has_decimal = any((v != int(v)) for v in out)
+    # --- Filtering ---
+    # 1. Filter out negative prices
+    positive_entries = [(p, w) for p, w in entries_with_weights if p > 0]
+
+    # 2. If any decimals present, drop small pure integers likely from enumeration
+    prices_only = [p for p, w in positive_entries]
+    has_decimal = any((p != int(p)) for p in prices_only)
     if has_decimal:
-        out = [v for v in out if (v != int(v)) or v >= 1000]
+        filtered_entries_with_weights = [(p, w) for p, w in positive_entries if (p != int(p)) or p >= 1000]
+    else:
+        filtered_entries_with_weights = positive_entries
 
-    # Trim to max 4 entries
-    if len(out) > 4:
-        out = out[:4]
+    # 3. Trim to max 4 entries
+    if len(filtered_entries_with_weights) > 4:
+        filtered_entries_with_weights = filtered_entries_with_weights[:4]
 
-    entry_avg = sum(out)/len(out) if out else None
+    # --- Averaging and Final Output ---
+    out = [p for p, w in filtered_entries_with_weights]
+
+    entry_avg = None
+    if out: # Check if there are any entries left after filtering
+        prices = [p for p, w in filtered_entries_with_weights]
+        weights = [w for p, w in filtered_entries_with_weights]
+
+        # Use weighted average only if all entries have a valid weight
+        if all(w is not None for w in weights):
+            total_weight = sum(weights)
+            if total_weight > 0:
+                # Normalize weights and calculate weighted average
+                entry_avg = sum(p * (w / total_weight) for p, w in filtered_entries_with_weights)
+            else: # Fallback for zero total weight
+                entry_avg = sum(prices) / len(prices)
+        else:
+            # Fallback to simple average if any weight is missing
+            entry_avg = sum(prices) / len(prices)
+
     return out, entry_avg, meta
 
 # ----------------------------- Targets ---------------------------------------
