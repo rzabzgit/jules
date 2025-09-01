@@ -412,7 +412,7 @@ def parse_targets(text: str, direction: str, entry_price: Optional[float]) -> Li
 
         is_noisy = _line_is_noisy(ln)
         is_stop_line = _line_has_any(LU, STOP_KEYS)
-        is_target_line = _line_has_any(LU, TARGET_KEYS) or re.match(r"^\s*\d+\)", ln)
+        is_target_line = (_line_has_any(LU, TARGET_KEYS) and "ENTRY" not in LU) or re.match(r"^\s*\d+\)", ln)
 
         if is_noisy or is_stop_line:
             i += 1
