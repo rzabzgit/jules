@@ -433,7 +433,6 @@ def parse_targets(text: str, direction: str, entry_price: Optional[float]) -> Li
                         break
 
                 # Process the current line for numbers and percentages
-                nums_with_str = _numbers_from(current_line)
                 if "%" in current_line and entry_price is not None:
                     pcts = [float(x) for x in re.findall(r"(\d+(?:\.\d+)?)\s*%", current_line)]
                     for p in pcts:
@@ -441,6 +440,10 @@ def parse_targets(text: str, direction: str, entry_price: Optional[float]) -> Li
                             targets.append(round(entry_price * (1 + p / 100.0), 10))
                         else:
                             targets.append(round(entry_price * (1 - p / 100.0), 10))
+
+                # Exclude numbers that are part of the percentage match itself
+                line_without_pct = re.sub(r"(\d+(?:\.\d+)?)\s*%", "", current_line)
+                nums_with_str = _numbers_from(line_without_pct)
 
                 for n, n_str in nums_with_str:
                     # drop pure small integers 1..10 as they are likely enumerations
