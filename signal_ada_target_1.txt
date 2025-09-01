@@ -1,0 +1,5 @@
+#ADA/USDT
+
+Targets: 1.0000
+Stoploss: 0.9000
+%%--SIGNAL_BOUNDARY--%%

@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 """
 Parser v2 (fixed) — robust, line‑scoped extraction with improved symbol logic,
@@ -101,13 +100,15 @@ def _float(tok: str) -> Optional[float]:
         except Exception:
             return None
 
-def _numbers_from(line: str) -> List[float]:
+def _numbers_from(line: str) -> List[Tuple[float, str]]:
+    """Extracts numbers and their original string representations from a line."""
+    nums: List[Tuple[float, str]] = []
     # Capture decimals and integers; ignore those embedded in words (require non-letter boundaries)
-    nums: List[float] = []
     for m in re.finditer(r"(?<![A-Za-z])(-?\d+(?:[.,]\d+)?)(?![A-Za-z])", line):
-        val = _float(m.group(1))
+        original_str = m.group(1)
+        val = _float(original_str)
         if val is not None:
-            nums.append(val)
+            nums.append((val, original_str))
     return nums
 
 def _line_has_any(line: str, keys: List[str]) -> bool:
@@ -342,7 +343,7 @@ def parse_entries(text: str) -> Tuple[List[float], Optional[float], Dict[str,boo
             # For CMP, take only the first number and ignore any weights
             nums = _numbers_from(ln)
             if nums:
-                entries_with_weights.append((nums[0], None))
+                entries_with_weights.append((nums[0][0], None))
                 meta["used_cmp"] = True
 
     # --- Filtering ---
@@ -430,7 +431,7 @@ def parse_targets(text: str, direction: str, entry_price: Optional[float]) -> Li
                         break
 
                 # Process the current line for numbers and percentages
-                nums = _numbers_from(current_line)
+                nums_with_str = _numbers_from(current_line)
                 if "%" in current_line and entry_price is not None:
                     pcts = [float(x) for x in re.findall(r"(\d+(?:\.\d+)?)\s*%", current_line)]
                     for p in pcts:
@@ -439,8 +440,10 @@ def parse_targets(text: str, direction: str, entry_price: Optional[float]) -> Li
                         else:
                             targets.append(round(entry_price * (1 - p / 100.0), 10))
 
-                for n in nums:
-                    if n == int(n) and 1 <= n <= 10:
+                for n, n_str in nums_with_str:
+                    # drop pure small integers 1..10 as they are likely enumerations
+                    is_decimal = '.' in n_str or ',' in n_str
+                    if not is_decimal and n == int(n) and 1 <= n <= 10:
                         continue
                     targets.append(abs(n))
 
@@ -542,14 +545,14 @@ def parse_stop(text: str, direction: str, entry_price: Optional[float]) -> Tuple
         # direct numeric stop price on same line
         nums = _numbers_from(ln)
         if nums:
-            stop_val = nums[-1]
+            stop_val = nums[-1][0]
             break
 
         # If we looked ahead for percent and found none, also check for number on the next line
         if not lookahead_checked and i+1 < n:
             nums2 = _numbers_from(lines[i+1])
             if nums2:
-                stop_val = nums2[-1]
+                stop_val = nums2[-1][0]
                 meta["lookahead_numeric"] = "1"
                 break
 
