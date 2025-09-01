@@ -401,32 +401,54 @@ def parse_entries(text: str) -> Tuple[List[float], Optional[float], Dict[str,boo
 
 def parse_targets(text: str, direction: str, entry_price: Optional[float]) -> List[float]:
     targets: List[float] = []
-    for ln in text.splitlines():
-        if _line_is_noisy(ln): 
-            continue
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        ln = lines[i]
         LU = ln.upper()
-        # skip any stop lines so "Stop Targets: 5-10%" won't pollute targets
-        if _line_has_any(LU, STOP_KEYS):
-            continue
-        # a line must look like target-ish
-        if not (_line_has_any(LU, TARGET_KEYS) or re.match(r"^\s*\d+\)", ln)):
+
+        is_noisy = _line_is_noisy(ln)
+        is_stop_line = _line_has_any(LU, STOP_KEYS)
+        is_target_line = _line_has_any(LU, TARGET_KEYS) or re.match(r"^\s*\d+\)", ln)
+
+        if is_noisy or is_stop_line:
+            i += 1
             continue
 
-        nums = _numbers_from(ln)
-        # percentage targets appear sometimes; convert only if entry known
-        if "%" in LU and entry_price is not None:
-            pcts = [float(x) for x in re.findall(r"(\d+(?:\.\d+)?)\s*%", ln)]
-            for p in pcts:
-                if direction == "LONG":
-                    targets.append(round(entry_price * (1 + p/100.0), 10))
-                else:
-                    targets.append(round(entry_price * (1 - p/100.0), 10))
-        # add explicit numeric tokens (but not bare enumerators), using abs() for safety against ' -0.223 ' typos
-        for n in nums:
-            # drop pure small integers 1..10 as they are likely enumerations
-            if n == int(n) and 1 <= n <= 10:
-                continue
-            targets.append(abs(n))
+        if is_target_line:
+            # Found a target line, start consuming it and subsequent lines
+            while i < len(lines):
+                current_line = lines[i]
+                current_LU = current_line.upper()
+
+                # Stop if the line is blank, a new section, or noisy
+                if not current_line.strip():
+                    break
+                if _line_has_any(current_LU, STOP_KEYS) or _line_has_any(current_LU, ENTRY_KEYS):
+                    # If the keyword is not also a target keyword, break
+                    if not _line_has_any(current_LU, TARGET_KEYS):
+                        break
+
+                # Process the current line for numbers and percentages
+                nums = _numbers_from(current_line)
+                if "%" in current_line and entry_price is not None:
+                    pcts = [float(x) for x in re.findall(r"(\d+(?:\.\d+)?)\s*%", current_line)]
+                    for p in pcts:
+                        if direction == "LONG":
+                            targets.append(round(entry_price * (1 + p / 100.0), 10))
+                        else:
+                            targets.append(round(entry_price * (1 - p / 100.0), 10))
+
+                for n in nums:
+                    if n == int(n) and 1 <= n <= 10:
+                        continue
+                    targets.append(abs(n))
+
+                i += 1
+            # The outer loop index 'i' is already advanced, so just continue
+            continue
+
+        i += 1
 
     # Deduplicate
     targets = list(dict.fromkeys(targets))

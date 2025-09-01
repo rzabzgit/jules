@@ -1,0 +1,16 @@
+Crypto Trading Signal Parser — Test Report (v2 fixed)
+======================================================================
+
+Signal #1
+ Pair: BTC/USDT
+ Direction: LONG
+ Entries: []
+ Entry avg: None
+ Targets: [50000, 51000, 52000]
+ Stop-loss: 48000
+
+Summary
+-------
+Total signals processed: 1
+Coverage: {'pair': 1, 'direction': 1, 'entries': 0, 'targets': 1, 'stop': 1}
+Accuracy (coverage %): {"pair": 100.0, "direction": 100.0, "entries": 0.0, "targets": 100.0, "stop": 100.0}
