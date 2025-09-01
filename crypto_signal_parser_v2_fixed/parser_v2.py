@@ -492,6 +492,16 @@ def parse_stop(text: str, direction: str, entry_price: Optional[float]) -> Tuple
                 meta["percent_no_entry"] = "1"
             break
 
+        # New: check for conditional phrases like '4H close under 123.45'
+        conditional_patterns = r"(?:stop-?loss\s*(?:on)?)?\s*(?:daily\s+close|\d+H\s*close|close\s*\d+H)\s+(?:under|below)\s+([\d.]+)"
+        m_cond = re.search(conditional_patterns, ln, flags=re.I)
+        if m_cond:
+            val = _float(m_cond.group(1))
+            if val is not None:
+                stop_val = val
+                meta["mode"] = "conditional"
+                break
+
         # direct numeric stop price on same line
         nums = _numbers_from(ln)
         if nums:
