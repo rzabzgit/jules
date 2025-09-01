@@ -2,13 +2,13 @@ Crypto Trading Signal Parser — Test Report (v2 fixed)
 ======================================================================
 
 Signal #1
- Pair: GALA/USDT
+ Pair: NEAR/USDT
  Direction: LONG
- Entries: [0.1916, 0.186]
- Entry avg: 0.1888
- Targets: [0.19505, 0.1988, 0.211, 0.234]
- Stop-loss: 0.168
- RR (1st target): 0.3005
+ Entries: [3.2, 2.87]
+ Entry avg: 3.035
+ Targets: [3.5, 3.8, 4]
+ Stop-loss: 2.5
+ RR (1st target): 0.8692
 
 Summary
 -------
