@@ -360,20 +360,23 @@ def parse_entries(text: str) -> Tuple[List[float], Optional[float], Dict[str,boo
     out = [p for p, w in filtered_entries_with_weights]
 
     entry_avg = None
-    if out: # Check if there are any entries left after filtering
+    if out: # Prevent division by zero if no entries found
         prices = [p for p, w in filtered_entries_with_weights]
         weights = [w for p, w in filtered_entries_with_weights]
 
-        # Use weighted average only if all entries have a valid weight
+        # Check for weighted average conditions
+        use_weighted_avg = False
         if all(w is not None for w in weights):
             total_weight = sum(weights)
-            if total_weight > 0:
-                # Normalize weights and calculate weighted average
-                entry_avg = sum(p * (w / total_weight) for p, w in filtered_entries_with_weights)
-            else: # Fallback for zero total weight
-                entry_avg = sum(prices) / len(prices)
+            # Use weighted average only if weights sum to approximately 100
+            if 99 <= total_weight <= 101:
+                use_weighted_avg = True
+
+        if use_weighted_avg:
+            # Calculate the weighted average using the 100-point scale
+            entry_avg = sum(p * (w / 100.0) for p, w in filtered_entries_with_weights)
         else:
-            # Fallback to simple average if any weight is missing
+            # Fallback to simple arithmetic average
             entry_avg = sum(prices) / len(prices)
 
     return out, entry_avg, meta
